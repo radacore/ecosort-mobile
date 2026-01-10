@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter run)",
+      "Bash(flutter clean)",
+      "Bash(flutter pub get)",
+      "Bash(flutter pub upgrade)",
+      "Bash(nc localhost 9155)",
+      "Bash(curl -v http://192.168.1.9:8000/api/kecamatan)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
