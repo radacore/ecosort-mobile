@@ -467,6 +467,103 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _calculatedStreakDays = streak;
   }
 
+  void _showLogoutConfirmation() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.logout_rounded,
+                  size: 32,
+                  color: Colors.red[400],
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Keluar dari Akun?',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF212121),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Apakah Anda yakin ingin keluar dari akun EcoSort?',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[500],
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 46,
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: Colors.grey[300]!),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'Batal',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: SizedBox(
+                      height: 46,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _logout();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red[500],
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Ya, Keluar',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   _logout() async {
     // Check if we're already logging out to prevent multiple logout attempts
     if (_isLoggingOut) {
@@ -1065,7 +1162,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     'Total Poin',
                     _calculatedPoints.toString(),
                     Icons.star_rounded,
-                    const [Color(0xFFFFA726), Color(0xFFFF9800)],
+                    const [Color(0xFF43A047), Color(0xFF2E7D32)],
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1074,7 +1171,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     'Streak',
                     '${_calculatedStreakDays} hari',
                     Icons.local_fire_department_rounded,
-                    const [Color(0xFFEF5350), Color(0xFFE53935)],
+                    const [Color(0xFF66BB6A), Color(0xFF43A047)],
                   ),
                 ),
               ],
@@ -1114,53 +1211,69 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Edit Profile Button
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _isEditing = true;
-                  });
-                },
-                icon: const Icon(Icons.edit_rounded, size: 20),
-                label: const Text(
-                  'Edit Profil',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2E7D32),
-                  foregroundColor: Colors.white,
-                  elevation: 2,
-                  shadowColor: const Color(0xFF2E7D32).withOpacity(0.4),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+            // Action Buttons Row
+            Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: SizedBox(
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _isEditing = true;
+                        });
+                      },
+                      icon: const Icon(Icons.edit_rounded, size: 18),
+                      label: const Text(
+                        'Edit Profil',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2E7D32),
+                        foregroundColor: Colors.white,
+                        elevation: 2,
+                        shadowColor: const Color(0xFF2E7D32).withOpacity(0.3),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Logout Button
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: OutlinedButton.icon(
-                onPressed: _logout,
-                icon: const Icon(Icons.logout_rounded, size: 20),
-                label: const Text(
-                  'Keluar',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red[600],
-                  side: BorderSide(color: Colors.red[300]!, width: 1.5),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: SizedBox(
+                    height: 50,
+                    child: OutlinedButton.icon(
+                      onPressed: _showLogoutConfirmation,
+                      icon: Icon(
+                        Icons.logout_rounded,
+                        size: 18,
+                        color: Colors.grey[600],
+                      ),
+                      label: Text(
+                        'Keluar',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: Colors.grey[300]!, width: 1.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
           ] else ...[
             // Edit Mode
