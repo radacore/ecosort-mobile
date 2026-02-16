@@ -29,7 +29,7 @@ class ProfileService {
 
       print('Profile response status: ${response.statusCode}');
       print('Profile response body: ${response.body}');
-      
+
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
         print('Profile data: $data');
@@ -59,21 +59,25 @@ class ProfileService {
         return null;
       }
 
-      print('Updating profile with name: $name, address: $address, district (kecamatan_id): $district');
+      print(
+        'Updating profile with name: $name, address: $address, district (kecamatan_id): $district',
+      );
       if (password != null && password.isNotEmpty) {
         print('Password will be updated');
       }
-      
+
       // Prepare the data to send - using the correct field names for your API
       final Map<String, dynamic> requestData = {};
-      if (name != null) requestData['nama'] = name;  // Use 'nama' not 'name'
-      if (address != null) requestData['alamat'] = address;  // Use 'alamat' not 'address'
-      
+      if (name != null) requestData['nama'] = name; // Use 'nama' not 'name'
+      if (address != null)
+        requestData['alamat'] = address; // Use 'alamat' not 'address'
+
       // If district is provided, send it as 'kecamatan_id' (the ID, not name)
       if (district != null) {
-        requestData['kecamatan_id'] = int.tryParse(district) ?? district; // Send as integer if possible
+        requestData['kecamatan_id'] =
+            int.tryParse(district) ?? district; // Send as integer if possible
       }
-      
+
       // If password is provided, send it and confirmation
       if (password != null && password.isNotEmpty) {
         requestData['password'] = password;
@@ -81,7 +85,7 @@ class ProfileService {
       }
 
       print('Sending request data: $requestData');
-      
+
       final response = await http.put(
         Uri.parse('$baseUrl/profil'),
         headers: <String, String>{
@@ -93,7 +97,7 @@ class ProfileService {
 
       print('Update profile response status: ${response.statusCode}');
       print('Update profile response body: ${response.body}');
-      
+
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
         print('Updated profile data: $data');
@@ -120,15 +124,18 @@ class ProfileService {
 
       print('Uploading avatar with token: $token');
       print('File path: $filePath');
-      
+
       // Using Dio for multipart form data upload
       final dio = Dio();
-      
+
       // Configure the dio client
       dio.options.headers['Authorization'] = 'Bearer $token';
-      
+
       final formData = FormData.fromMap({
-        'avatar': await MultipartFile.fromFile(filePath, filename: 'avatar.jpg'),
+        'avatar': await MultipartFile.fromFile(
+          filePath,
+          filename: 'avatar.jpg',
+        ),
       });
 
       final response = await dio.post(
@@ -138,7 +145,7 @@ class ProfileService {
 
       print('Avatar upload response status: ${response.statusCode}');
       print('Avatar upload response data: ${response.data}');
-      
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         final Map<String, dynamic> data = response.data;
         print('Avatar upload data: $data');

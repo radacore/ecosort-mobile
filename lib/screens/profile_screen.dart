@@ -27,31 +27,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _nameController = TextEditingController();
   final _addressController = TextEditingController();
   final _districtController = TextEditingController();
-  
+
   // Password controllers
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  
+
   // Kecamatan related variables
   List<Kecamatan> _kecamatanList = [];
   Kecamatan? _selectedKecamatan;
   bool _isLoadingKecamatan = false;
-  
+
   // Avatar related variables
   File? _selectedImage;
   bool _isUploadingAvatar = false;
-  
+
   // Waste history related variables
   List<WasteDeposit> _wasteHistory = [];
   bool _isLoadingHistory = false;
   int _currentTab = 0; // 0 for profile, 1 for history
   int _calculatedPoints = 0;
   int _calculatedStreakDays = 0;
-  
+
   // Cache variables
   bool _isProfileLoaded = false;
   DateTime? _lastProfileLoadTime;
-  static const Duration _cacheDuration = Duration(minutes: 5); // Cache for 5 minutes
+  static const Duration _cacheDuration = Duration(
+    minutes: 5,
+  ); // Cache for 5 minutes
 
   // Flag to prevent multiple profile loads
   bool _isProfileLoading = false;
@@ -72,7 +74,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _loadProfile();
         _loadKecamatan();
       } else {
-        print('Profile screen already initialized, skipping duplicate initialization');
+        print(
+          'Profile screen already initialized, skipping duplicate initialization',
+        );
         // Still update the UI if we have cached data
         if (mounted) {
           setState(() {
@@ -120,8 +124,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     // Check if we have a cached profile and it's still valid
-    if (_isProfileLoaded && 
-        _lastProfileLoadTime != null && 
+    if (_isProfileLoaded &&
+        _lastProfileLoadTime != null &&
         DateTime.now().difference(_lastProfileLoadTime!) < _cacheDuration &&
         _user != null) {
       // Use cached data, only set loading to false
@@ -153,7 +157,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _lastProfileLoadTime = DateTime.now();
           _calculatedPoints = user?.totalPoints ?? 0;
           _calculatedStreakDays = user?.streakDays ?? 0;
-          
+
           if (user != null) {
             _nameController.text = user.name;
             _addressController.text = user.address ?? '';
@@ -164,7 +168,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (_wasteHistory.isEmpty && !_isLoadingHistory) {
           _loadWasteHistory();
         }
-        
+
         // After loading the user, try to update the district display with kecamatan name if needed
         if (user != null) {
           // Check if the district is an ID rather than a name
@@ -179,7 +183,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   name: user.name,
                   email: user.email,
                   address: user.address,
-                  district: kecamatanName, // Update district to show the name instead of ID
+                  district:
+                      kecamatanName, // Update district to show the name instead of ID
                   totalPoints: user.totalPoints,
                   streakDays: user.streakDays,
                   avatarPath: user.avatarPath,
@@ -192,8 +197,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             }
           }
         }
-        
-        print('Profile loaded successfully - User: ${user?.name}, Avatar: ${user?.avatarPath}');
+
+        print(
+          'Profile loaded successfully - User: ${user?.name}, Avatar: ${user?.avatarPath}',
+        );
       }
     } catch (e, stackTrace) {
       print('Error loading profile: $e');
@@ -216,7 +223,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   _loadKecamatan() async {
     // Check if we're already loading or have data to prevent multiple loads
     if (_isLoadingKecamatan || _kecamatanList.isNotEmpty) {
-      print('Skipping kecamatan load - already loading: $_isLoadingKecamatan, has data: ${_kecamatanList.isNotEmpty}');
+      print(
+        'Skipping kecamatan load - already loading: $_isLoadingKecamatan, has data: ${_kecamatanList.isNotEmpty}',
+      );
       return;
     }
 
@@ -226,10 +235,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     try {
       print('=== LOADING KECAMATAN DATA ===');
-      
+
       final kecamatanService = KecamatanService();
       final kecamatanList = await kecamatanService.getKecamatan();
-      
+
       print('Loaded ${kecamatanList.length} kecamatan items');
       if (kecamatanList.isNotEmpty) {
         print('First 3 kecamatan:');
@@ -239,12 +248,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       } else {
         print('WARNING: No kecamatan data loaded');
       }
-      
+
       if (mounted) {
         setState(() {
           _kecamatanList = kecamatanList;
           _isLoadingKecamatan = false;
-          
+
           // Set default selection if user has a district
           if (_user != null && _user!.district != null) {
             final userDistrict = _user!.district!;
@@ -304,7 +313,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     // Validate password confirmation if password is entered
-    if (_passwordController.text.isNotEmpty && 
+    if (_passwordController.text.isNotEmpty &&
         _passwordController.text != _confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -318,7 +327,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     print('=== UPDATING PROFILE ===');
     print('Name: ${_nameController.text}');
     print('Address: ${_addressController.text}');
-    print('Selected Kecamatan: ${_selectedKecamatan?.name} (ID: ${_selectedKecamatan?.id})');
+    print(
+      'Selected Kecamatan: ${_selectedKecamatan?.name} (ID: ${_selectedKecamatan?.id})',
+    );
     if (_passwordController.text.isNotEmpty) {
       print('Password will be updated');
     }
@@ -333,14 +344,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
         name: _nameController.text,
         address: _addressController.text,
         district: _selectedKecamatan!.id, // Send the kecamatan ID, not name
-        password: _passwordController.text.isNotEmpty ? _passwordController.text : null,
-        confirmPassword: _passwordController.text.isNotEmpty ? _confirmPasswordController.text : null,
+        password: _passwordController.text.isNotEmpty
+            ? _passwordController.text
+            : null,
+        confirmPassword: _passwordController.text.isNotEmpty
+            ? _confirmPasswordController.text
+            : null,
       );
 
       if (updatedUser != null) {
         // Check if the updated user has kecamatan ID instead of name, and try to convert it
         String? finalDistrictName = updatedUser.district;
-        if (finalDistrictName != null && int.tryParse(finalDistrictName) != null) {
+        if (finalDistrictName != null &&
+            int.tryParse(finalDistrictName) != null) {
           // It's an ID, let's try to get the name
           final kecamatanName = await _getKecamatanNameById(finalDistrictName);
           if (kecamatanName != null) {
@@ -354,7 +370,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             name: updatedUser.name,
             email: updatedUser.email,
             address: updatedUser.address,
-            district: finalDistrictName, // Use the name if available, otherwise the ID
+            district:
+                finalDistrictName, // Use the name if available, otherwise the ID
             totalPoints: updatedUser.totalPoints,
             streakDays: updatedUser.streakDays,
             avatarPath: updatedUser.avatarPath,
@@ -367,13 +384,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           // Clear password fields
           _passwordController.clear();
           _confirmPasswordController.clear();
-          
+
           // Clear the profile cache since profile data has been updated
           _isProfileLoaded = false;
           _lastProfileLoadTime = null;
           _isProfileLoading = false;
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Profil berhasil diperbarui'),
@@ -408,8 +425,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoggingOut = false;
 
   void _recalculatePointsAndStreak() {
-    final validatedDeposits =
-        _wasteHistory.where((deposit) => deposit.isValidated).toList();
+    final validatedDeposits = _wasteHistory
+        .where((deposit) => deposit.isValidated)
+        .toList();
 
     _calculatedPoints = validatedDeposits.length;
 
@@ -418,13 +436,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
 
-    final dates = validatedDeposits
-        .map((deposit) => _parseDate(deposit.timestamp))
-        .where((date) => date != null)
-        .map((date) => DateTime(date!.year, date.month, date.day))
-        .toSet()
-        .toList()
-      ..sort();
+    final dates =
+        validatedDeposits
+            .map((deposit) => _parseDate(deposit.timestamp))
+            .where((date) => date != null)
+            .map((date) => DateTime(date!.year, date.month, date.day))
+            .toSet()
+            .toList()
+          ..sort();
 
     if (dates.isEmpty) {
       _calculatedStreakDays = 0;
@@ -462,7 +481,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final authService = AuthService();
       final result = await authService.logout();
-      
+
       if (mounted) {
         // Show message based on result
         if (result['success'] == true) {
@@ -480,13 +499,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           );
         }
-        
+
         // Clear the profile cache on logout
         _isProfileLoaded = false;
         _lastProfileLoadTime = null;
         _isProfileLoading = false;
         _isLoggingOut = false;
-        
+
         // Navigate to login screen
         Navigator.pushAndRemoveUntil(
           context,
@@ -513,10 +532,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   _loadWasteHistory() async {
     // Check if we're already loading or have data to prevent multiple loads
     if (_isLoadingHistory || _wasteHistory.isNotEmpty) {
-      print('Skipping waste history load - already loading: $_isLoadingHistory, has data: ${_wasteHistory.isNotEmpty}');
+      print(
+        'Skipping waste history load - already loading: $_isLoadingHistory, has data: ${_wasteHistory.isNotEmpty}',
+      );
       return;
     }
-    
+
     setState(() {
       _isLoadingHistory = true;
     });
@@ -524,7 +545,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final authService = AuthService();
       final token = await authService.getToken();
-      
+
       if (token == null) {
         if (mounted) {
           setState(() {
@@ -558,7 +579,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           });
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Tidak dapat menentukan pengguna. Silakan coba lagi.'),
+              content: Text(
+                'Tidak dapat menentukan pengguna. Silakan coba lagi.',
+              ),
               backgroundColor: Colors.red,
             ),
           );
@@ -571,7 +594,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         token: token,
         userId: userId,
       );
-      
+
       if (mounted) {
         setState(() {
           _wasteHistory = history;
@@ -615,13 +638,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         source: ImageSource.gallery,
         imageQuality: 60, // Reduce image size to optimize upload
       );
-      
+
       if (pickedFile != null) {
         setState(() {
           _selectedImage = File(pickedFile.path);
           _isPickingImage = false;
         });
-        
+
         // Upload the avatar after selecting
         await _uploadAvatar(_selectedImage!.path);
       } else {
@@ -661,7 +684,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _isProfileLoaded = false;
         _lastProfileLoadTime = null;
         _isProfileLoading = false; // Reset loading flag
-        
+
         // Update the user data directly to show the new avatar immediately
         if (mounted) {
           setState(() {
@@ -674,11 +697,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _districtController.text = updatedUser.district ?? '';
             }
           });
-          
+
           print('Avatar uploaded successfully and state updated directly');
           print('Updated user has district: ${updatedUser.district}');
           print('Updated user has avatarPath: ${updatedUser.avatarPath}');
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Avatar berhasil diunggah'),
@@ -737,7 +760,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               print('Tab tapped: $index');
               setState(() {
                 _currentTab = index;
-                if (index == 1 && (_wasteHistory.isEmpty || !_isLoadingHistory)) {
+                if (index == 1 &&
+                    (_wasteHistory.isEmpty || !_isLoadingHistory)) {
                   _loadWasteHistory();
                 }
               });
@@ -768,15 +792,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildProfileContent() {
-    print('Building profile content - isLoading: $_isLoading, user: ${_user?.name}');
+    print(
+      'Building profile content - isLoading: $_isLoading, user: ${_user?.name}',
+    );
     return _isLoading
         ? const Center(child: CircularProgressIndicator())
         : SingleChildScrollView(
             padding: const EdgeInsets.all(20.0),
             child: _user == null
-                ? const Center(
-                    child: Text('Gagal memuat data pengguna'),
-                  )
+                ? const Center(child: Text('Gagal memuat data pengguna'))
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -798,61 +822,87 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                 ],
                               ),
-                              child: _user?.avatarPath != null 
-                                ? (() {
-                                    print('Avatar path available: ${_user!.avatarPath}');
-                                    print('Built avatar URL: ${_buildAvatarUrl(_user!.avatarPath!)}');
-                                    return ClipRRect(
-                                      borderRadius: BorderRadius.circular(60),
-                                      child: Image.network(
-                                        _buildAvatarUrl(_user!.avatarPath!),
-                                        width: 120,
-                                        height: 120,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) {
-                                          print('Error loading avatar image: $error, URL: ${_buildAvatarUrl(_user!.avatarPath!)}');
-                                          return Icon(
-                                            Icons.person,
-                                            size: 60,
-                                            color: Colors.white,
-                                          );
-                                        },
-                                        loadingBuilder: (context, child, loadingProgress) {
-                                          if (loadingProgress == null) {
-                                            print('Avatar image loaded: ${_buildAvatarUrl(_user!.avatarPath!)}');
-                                            return child;
-                                          }
-                                          print('Avatar image loading...');
-                                          return Container(
-                                            width: 120,
-                                            height: 120,
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFF368b3a),
-                                              borderRadius: BorderRadius.circular(60),
-                                            ),
-                                            child: const Center(
-                                              child: SizedBox(
-                                                width: 30,
-                                                height: 30,
-                                                child: CircularProgressIndicator(
-                                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                                  strokeWidth: 2,
-                                                ),
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    );
-                                  })()
-                                : (() {
-                                    print('No avatar path available, showing default icon');
-                                    return Icon(
-                                      Icons.person,
-                                      size: 60,
-                                      color: Colors.white,
-                                    );
-                                  })(),
+                              child: _user?.avatarPath != null
+                                  ? (() {
+                                      print(
+                                        'Avatar path available: ${_user!.avatarPath}',
+                                      );
+                                      print(
+                                        'Built avatar URL: ${_buildAvatarUrl(_user!.avatarPath!)}',
+                                      );
+                                      return ClipRRect(
+                                        borderRadius: BorderRadius.circular(60),
+                                        child: Image.network(
+                                          _buildAvatarUrl(_user!.avatarPath!),
+                                          width: 120,
+                                          height: 120,
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                                print(
+                                                  'Error loading avatar image: $error, URL: ${_buildAvatarUrl(_user!.avatarPath!)}',
+                                                );
+                                                return Icon(
+                                                  Icons.person,
+                                                  size: 60,
+                                                  color: Colors.white,
+                                                );
+                                              },
+                                          loadingBuilder:
+                                              (
+                                                context,
+                                                child,
+                                                loadingProgress,
+                                              ) {
+                                                if (loadingProgress == null) {
+                                                  print(
+                                                    'Avatar image loaded: ${_buildAvatarUrl(_user!.avatarPath!)}',
+                                                  );
+                                                  return child;
+                                                }
+                                                print(
+                                                  'Avatar image loading...',
+                                                );
+                                                return Container(
+                                                  width: 120,
+                                                  height: 120,
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(
+                                                      0xFF368b3a,
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          60,
+                                                        ),
+                                                  ),
+                                                  child: const Center(
+                                                    child: SizedBox(
+                                                      width: 30,
+                                                      height: 30,
+                                                      child: CircularProgressIndicator(
+                                                        valueColor:
+                                                            AlwaysStoppedAnimation<
+                                                              Color
+                                                            >(Colors.white),
+                                                        strokeWidth: 2,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                        ),
+                                      );
+                                    })()
+                                  : (() {
+                                      print(
+                                        'No avatar path available, showing default icon',
+                                      );
+                                      return Icon(
+                                        Icons.person,
+                                        size: 60,
+                                        color: Colors.white,
+                                      );
+                                    })(),
                             ),
                             Positioned(
                               bottom: 0,
@@ -883,7 +933,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           height: 20,
                                           child: CircularProgressIndicator(
                                             strokeWidth: 2,
-                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                  Colors.white,
+                                                ),
                                           ),
                                         ),
                                       )
@@ -920,7 +973,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 const Divider(height: 20, color: Colors.grey),
                                 _buildInfoRow('Alamat', _user!.address ?? '-'),
                                 const Divider(height: 20, color: Colors.grey),
-                                _buildInfoRow('Kecamatan', _user!.district ?? '-'),
+                                _buildInfoRow(
+                                  'Kecamatan',
+                                  _user!.district ?? '-',
+                                ),
                               ],
                             ),
                           ),
@@ -969,7 +1025,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: OutlinedButton(
                             onPressed: _logout,
                             style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Colors.red, width: 2),
+                              side: const BorderSide(
+                                color: Colors.red,
+                                width: 2,
+                              ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -1033,49 +1092,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 _isLoadingKecamatan
                                     ? const CircularProgressIndicator()
                                     : _kecamatanList.isEmpty
-                                        ? const Text('No kecamatan data available')
-                                        : DropdownButtonFormField<Kecamatan>(
-                                            value: _selectedKecamatan,
-                                            hint: const Text('Pilih Kecamatan'),
-                                            isExpanded: true,
-                                            decoration: InputDecoration(
-                                              labelText: 'Kecamatan',
-                                              border: OutlineInputBorder(
-                                                borderRadius: BorderRadius.circular(10),
-                                              ),
-                                              focusedBorder: OutlineInputBorder(
-                                                borderRadius: BorderRadius.circular(10),
-                                                borderSide: const BorderSide(
-                                                  color: Color(0xFF368b3a),
-                                                  width: 2,
-                                                ),
-                                              ),
+                                    ? const Text('No kecamatan data available')
+                                    : DropdownButtonFormField<Kecamatan>(
+                                        value: _selectedKecamatan,
+                                        hint: const Text('Pilih Kecamatan'),
+                                        isExpanded: true,
+                                        decoration: InputDecoration(
+                                          labelText: 'Kecamatan',
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              10,
                                             ),
-                                            items: _kecamatanList.map((kecamatan) {
-                                              print('Building dropdown item: ${kecamatan.name}');
-                                              return DropdownMenuItem<Kecamatan>(
-                                                value: kecamatan,
-                                                child: Text(
-                                                  kecamatan.name,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                              );
-                                            }).toList(),
-                                            onChanged: (Kecamatan? newValue) {
-                                              print('Selected kecamatan: ${newValue?.name}');
-                                              setState(() {
-                                                _selectedKecamatan = newValue;
-                                              });
-                                            },
-                                            validator: (value) {
-                                              if (value == null) {
-                                                return 'Please select a kecamatan';
-                                              }
-                                              return null;
-                                            },
-                                            dropdownColor: Colors.white,
-                                            menuMaxHeight: 300,
                                           ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                            borderSide: const BorderSide(
+                                              color: Color(0xFF368b3a),
+                                              width: 2,
+                                            ),
+                                          ),
+                                        ),
+                                        items: _kecamatanList.map((kecamatan) {
+                                          print(
+                                            'Building dropdown item: ${kecamatan.name}',
+                                          );
+                                          return DropdownMenuItem<Kecamatan>(
+                                            value: kecamatan,
+                                            child: Text(
+                                              kecamatan.name,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          );
+                                        }).toList(),
+                                        onChanged: (Kecamatan? newValue) {
+                                          print(
+                                            'Selected kecamatan: ${newValue?.name}',
+                                          );
+                                          setState(() {
+                                            _selectedKecamatan = newValue;
+                                          });
+                                        },
+                                        validator: (value) {
+                                          if (value == null) {
+                                            return 'Please select a kecamatan';
+                                          }
+                                          return null;
+                                        },
+                                        dropdownColor: Colors.white,
+                                        menuMaxHeight: 300,
+                                      ),
                                 const SizedBox(height: 20),
                                 TextFormField(
                                   controller: _passwordController,
@@ -1112,7 +1179,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ),
                                   ),
                                   validator: (value) {
-                                    if (_passwordController.text.isNotEmpty && 
+                                    if (_passwordController.text.isNotEmpty &&
                                         value != _passwordController.text) {
                                       return 'Password tidak cocok';
                                     }
@@ -1156,18 +1223,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.history,
-              size: 80,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.history, size: 80, color: Colors.grey[400]),
             const SizedBox(height: 20),
             const Text(
               'Belum ada riwayat penyetoran',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
           ],
         ),
@@ -1206,14 +1266,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                          'Volume: ${deposit.volumeLiters.toStringAsFixed(2)} L',
+                              'Volume: ${deposit.volumeLiters.toStringAsFixed(2)} L',
                               style: const TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey,
                               ),
                             ),
                             Text(
-                          'Berat: ${deposit.weightKg.toStringAsFixed(2)} Kg',
+                              'Berat: ${deposit.weightKg.toStringAsFixed(2)} Kg',
                               style: const TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey,
@@ -1228,13 +1288,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                      color: deposit.isValidated
-                          ? const Color(0xFF368b3a)
-                          : Colors.orange,
+                          color: deposit.isValidated
+                              ? const Color(0xFF368b3a)
+                              : Colors.orange,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                      deposit.isValidated ? 'Tervalidasi' : 'Menunggu Validasi',
+                          deposit.isValidated
+                              ? 'Tervalidasi'
+                              : 'Menunggu Validasi',
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -1245,11 +1307,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                  'Waktu Setoran: ${_formatDate(deposit.timestamp)}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
+                    'Waktu Setoran: ${_formatDate(deposit.timestamp)}',
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
                   ),
                 ],
               ),
@@ -1319,9 +1378,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Card(
       color: const Color(0xFF368b3a),
       elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
@@ -1365,12 +1422,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final kecamatanService = KecamatanService();
       final kecamatanList = await kecamatanService.getKecamatan();
-      
+
       final kecamatan = kecamatanList.firstWhere(
         (element) => element.id == kecamatanId,
         orElse: () => Kecamatan(id: '', name: ''),
       );
-      
+
       if (kecamatan.id.isNotEmpty) {
         // Update the local kecamatan list
         if (mounted) {
@@ -1398,16 +1455,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _buildAvatarUrl(String avatarPath) {
     try {
       // Create proper URL for avatar, ensuring no duplicate slashes
-      String baseUrl = AppConstants.BASE_URL.replaceAll('/api', '').replaceAll(RegExp(r'/+'), '/');
-      
+      String baseUrl = AppConstants.BASE_URL
+          .replaceAll('/api', '')
+          .replaceAll(RegExp(r'/+'), '/');
+
       // Ensure the avatar path starts with the appropriate storage directory
-      String normalizedAvatarPath = avatarPath.startsWith('storage/') ? avatarPath : 'storage/$avatarPath';
-      
+      String normalizedAvatarPath = avatarPath.startsWith('storage/')
+          ? avatarPath
+          : 'storage/$avatarPath';
+
       // Ensure proper URL format, removing any duplicate slashes and fixing protocol
-      String cleanBaseUrl = baseUrl.replaceAll(RegExp(r'http:/'), 'http://').replaceAll(RegExp(r'https:/'), 'https://');
-      
-      String fullUrl = '$cleanBaseUrl/$normalizedAvatarPath'.replaceAll(RegExp(r'([^:])/{2,}'), r'$1/');
-      print('Building avatar URL - Base: $cleanBaseUrl, Path: $normalizedAvatarPath, Full: $fullUrl');
+      String cleanBaseUrl = baseUrl
+          .replaceAll(RegExp(r'http:/'), 'http://')
+          .replaceAll(RegExp(r'https:/'), 'https://');
+
+      String fullUrl = '$cleanBaseUrl/$normalizedAvatarPath'.replaceAll(
+        RegExp(r'([^:])/{2,}'),
+        r'$1/',
+      );
+      print(
+        'Building avatar URL - Base: $cleanBaseUrl, Path: $normalizedAvatarPath, Full: $fullUrl',
+      );
       return fullUrl;
     } catch (e) {
       print('Error building avatar URL: $e, avatarPath: $avatarPath');

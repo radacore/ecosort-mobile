@@ -24,7 +24,9 @@ class NewsArticle {
       category: json['kategori']?.toString() ?? '',
       content: json['konten']?.toString() ?? '',
       imageUrl: json['foto_url']?.toString() ?? '',
-      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0),
+      createdAt:
+          DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
       updatedAt: DateTime.tryParse(json['updated_at']?.toString() ?? ''),
     );
   }
