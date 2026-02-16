@@ -16,6 +16,19 @@ class _BerandaScreenState extends State<BerandaScreen> {
   String? _errorMessage;
   List<NewsArticle> _articles = [];
 
+  // Pagination
+  int _currentPage = 0;
+  static const int _itemsPerPage = 6;
+
+  int get _totalPages => (_articles.length / _itemsPerPage).ceil();
+
+  List<NewsArticle> get _currentPageArticles {
+    final start = _currentPage * _itemsPerPage;
+    final end = (start + _itemsPerPage).clamp(0, _articles.length);
+    if (start >= _articles.length) return [];
+    return _articles.sublist(start, end);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -38,7 +51,16 @@ class _BerandaScreenState extends State<BerandaScreen> {
         _errorMessage = 'Belum ada berita tersedia.';
       }
       _articles = items;
+      _currentPage = 0;
     });
+  }
+
+  void _goToPage(int page) {
+    if (page >= 0 && page < _totalPages) {
+      setState(() {
+        _currentPage = page;
+      });
+    }
   }
 
   @override
@@ -54,6 +76,8 @@ class _BerandaScreenState extends State<BerandaScreen> {
             _buildAppBar(context),
             _buildSectionHeader(),
             _buildContentSliver(),
+            if (!_isLoading && _errorMessage == null && _articles.isNotEmpty)
+              _buildPagination(),
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
@@ -76,7 +100,10 @@ class _BerandaScreenState extends State<BerandaScreen> {
           final statusBarHeight = MediaQuery.of(context).padding.top;
           final maxHeight = constraints.maxHeight;
           final minHeight = kToolbarHeight + statusBarHeight;
-          final progress = ((maxHeight - minHeight) / (220 - minHeight)).clamp(0.0, 1.0);
+          final progress = ((maxHeight - minHeight) / (220 - minHeight)).clamp(
+            0.0,
+            1.0,
+          );
 
           return Stack(
             fit: StackFit.expand,
@@ -128,7 +155,10 @@ class _BerandaScreenState extends State<BerandaScreen> {
                 child: Opacity(
                   opacity: progress,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
@@ -149,7 +179,10 @@ class _BerandaScreenState extends State<BerandaScreen> {
                             color: const Color(0x19368b3a),
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          child: const Icon(Icons.auto_graph, color: Color(0xFF368b3a)),
+                          child: const Icon(
+                            Icons.auto_graph,
+                            color: Color(0xFF368b3a),
+                          ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
@@ -169,7 +202,10 @@ class _BerandaScreenState extends State<BerandaScreen> {
                                 _articles.isEmpty
                                     ? 'Tarik ke bawah untuk memperbarui berita.'
                                     : '${_articles.length} artikel terbaru siap dibaca.',
-                                style: const TextStyle(fontSize: 12, color: Color(0xFF5C6F5D)),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF5C6F5D),
+                                ),
                               ),
                             ],
                           ),
@@ -190,7 +226,10 @@ class _BerandaScreenState extends State<BerandaScreen> {
                 alignment: Alignment.bottomLeft,
                 child: Container(
                   height: kToolbarHeight + statusBarHeight,
-                  padding: const EdgeInsetsDirectional.only(start: 16, bottom: 12),
+                  padding: const EdgeInsetsDirectional.only(
+                    start: 16,
+                    bottom: 12,
+                  ),
                   alignment: Alignment.bottomLeft,
                   child: Text(
                     'Beranda',
@@ -220,10 +259,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
             Expanded(
               child: Text(
                 'Berita & Artikel Terbaru',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
             ),
           ],
@@ -248,10 +284,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
           children: [
             const Icon(Icons.inbox_outlined, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
-            Text(
-              _errorMessage!,
-              style: const TextStyle(color: Colors.grey),
-            ),
+            Text(_errorMessage!, style: const TextStyle(color: Colors.grey)),
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: _loadNews,
@@ -266,157 +299,295 @@ class _BerandaScreenState extends State<BerandaScreen> {
       );
     }
 
+    final pageArticles = _currentPageArticles;
+
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      sliver: SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final article = _articles[index];
-            return _NewsCard(
-              article: article,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => NewsDetailScreen(slug: article.slug),
+      sliver: SliverGrid(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 0.72,
+        ),
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final article = pageArticles[index];
+          return _NewsGridCard(
+            article: article,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => NewsDetailScreen(slug: article.slug),
+                ),
+              );
+            },
+          );
+        }, childCount: pageArticles.length),
+      ),
+    );
+  }
+
+  SliverToBoxAdapter _buildPagination() {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Previous button
+            Material(
+              color: _currentPage > 0
+                  ? const Color(0xFF368b3a)
+                  : Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(10),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: _currentPage > 0
+                    ? () => _goToPage(_currentPage - 1)
+                    : null,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
                   ),
-                );
-              },
-            );
-          },
-          childCount: _articles.length,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.chevron_left,
+                        size: 20,
+                        color: _currentPage > 0 ? Colors.white : Colors.grey,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Prev',
+                        style: TextStyle(
+                          color: _currentPage > 0 ? Colors.white : Colors.grey,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 12),
+
+            // Page indicators
+            ...List.generate(_totalPages, (index) {
+              final isActive = index == _currentPage;
+              return GestureDetector(
+                onTap: () => _goToPage(index),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: isActive
+                        ? const Color(0xFF368b3a)
+                        : Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: isActive
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xFF368b3a).withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '${index + 1}',
+                    style: TextStyle(
+                      color: isActive ? Colors.white : Colors.grey.shade600,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              );
+            }),
+
+            const SizedBox(width: 12),
+
+            // Next button
+            Material(
+              color: _currentPage < _totalPages - 1
+                  ? const Color(0xFF368b3a)
+                  : Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(10),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: _currentPage < _totalPages - 1
+                    ? () => _goToPage(_currentPage + 1)
+                    : null,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Next',
+                        style: TextStyle(
+                          color: _currentPage < _totalPages - 1
+                              ? Colors.white
+                              : Colors.grey,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.chevron_right,
+                        size: 20,
+                        color: _currentPage < _totalPages - 1
+                            ? Colors.white
+                            : Colors.grey,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _NewsCard extends StatelessWidget {
+class _NewsGridCard extends StatelessWidget {
   final NewsArticle article;
   final VoidCallback onTap;
 
-  const _NewsCard({
-    required this.article,
-    required this.onTap,
-  });
+  const _NewsGridCard({required this.article, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Material(
-        elevation: 6,
-        borderRadius: BorderRadius.circular(18),
-        shadowColor: Colors.black12,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(18),
-          onTap: onTap,
-          child: Ink(
-            height: 220,
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(18)),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: Hero(
-                    tag: 'news-image-${article.slug}',
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
-                      child: article.imageUrl.isNotEmpty
-                          ? Image.network(
-                              article.imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                color: Colors.grey.shade200,
-                                alignment: Alignment.center,
-                                child: const Icon(Icons.image_not_supported, size: 48, color: Colors.grey),
-                              ),
-                            )
-                          : Container(
+    return Material(
+      elevation: 4,
+      borderRadius: BorderRadius.circular(16),
+      shadowColor: Colors.black12,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Ink(
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image
+              Expanded(
+                flex: 3,
+                child: Hero(
+                  tag: 'news-image-${article.slug}',
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(16),
+                    ),
+                    child: article.imageUrl.isNotEmpty
+                        ? Image.network(
+                            article.imageUrl,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
                               color: Colors.grey.shade200,
                               alignment: Alignment.center,
-                              child: const Icon(Icons.image, size: 48, color: Colors.grey),
+                              child: const Icon(
+                                Icons.image_not_supported,
+                                size: 32,
+                                color: Colors.grey,
+                              ),
                             ),
-                    ),
+                          )
+                        : Container(
+                            color: Colors.grey.shade200,
+                            alignment: Alignment.center,
+                            child: const Icon(
+                              Icons.image,
+                              size: 32,
+                              color: Colors.grey,
+                            ),
+                          ),
                   ),
                 ),
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withOpacity(0.05),
-                          Colors.black.withOpacity(0.35),
-                          Colors.black.withOpacity(0.65),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 16,
-                  left: 16,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.85),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.eco, size: 14, color: Color(0xFF368b3a)),
-                        const SizedBox(width: 6),
-                        Text(
+              ),
+
+              // Content
+              Expanded(
+                flex: 2,
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Category badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0x19368b3a),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
                           article.category,
                           style: const TextStyle(
-                            fontSize: 13,
+                            fontSize: 10,
                             fontWeight: FontWeight.w600,
                             color: Color(0xFF368b3a),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 16,
-                  right: 16,
-                  bottom: 20,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        article.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                      ),
+                      const SizedBox(height: 6),
+
+                      // Title
+                      Expanded(
+                        child: Text(
+                          article.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1F2A1C),
+                            height: 1.3,
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 8),
+
+                      // Date
                       Row(
                         children: [
-                          const Icon(Icons.calendar_today, size: 14, color: Colors.white70),
-                          const SizedBox(width: 6),
+                          const Icon(
+                            Icons.calendar_today,
+                            size: 11,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(width: 4),
                           Text(
                             _formatDate(article.createdAt),
-                            style: const TextStyle(fontSize: 12, color: Colors.white70),
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey,
+                            ),
                           ),
-                          const Spacer(),
-                          const Icon(Icons.chevron_right, color: Colors.white70),
                         ],
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

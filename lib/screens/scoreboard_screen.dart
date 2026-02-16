@@ -71,32 +71,32 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _hasError
-                ? _buildErrorState()
-                : _data == null
-                    ? _buildEmptyState()
-                    : ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(16),
-                        children: [
-                          if (_data!.currentUser != null)
-                            _CurrentUserCard(entry: _data!.currentUser!),
-                          const SizedBox(height: 24),
-                          Text(
-                            'Peringkat Tertinggi',
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF1F2A1C),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          ..._data!.topScores.map(
-                            (entry) => _ScoreboardTile(
-                              entry: entry,
-                              isCurrentUser: _data!.currentUser?.userId == entry.userId,
-                            ),
-                          ),
-                        ],
-                      ),
+            ? _buildErrorState()
+            : _data == null
+            ? _buildEmptyState()
+            : ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                children: [
+                  if (_data!.currentUser != null)
+                    _CurrentUserCard(entry: _data!.currentUser!),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Peringkat Tertinggi',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF1F2A1C),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ..._data!.topScores.map(
+                    (entry) => _ScoreboardTile(
+                      entry: entry,
+                      isCurrentUser: _data!.currentUser?.userId == entry.userId,
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }
@@ -189,24 +189,54 @@ class _CurrentUserCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF368b3a),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.emoji_events, color: Colors.white, size: 16),
-                      const SizedBox(width: 6),
-                      Text(
-                        '#${entry.rank}',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                if (entry.rank > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF368b3a),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.emoji_events,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '#${entry.rank}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade400,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'Belum Ada',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
                       ),
-                    ],
+                    ),
                   ),
-                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -270,31 +300,35 @@ class _ScoreboardTile extends StatelessWidget {
           alignment: Alignment.bottomRight,
           children: [
             _AvatarCircle(entry: entry, size: 48),
-            Positioned(
-              bottom: -2,
-              right: -2,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: badgeColor,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: badgeColor.withOpacity(0.4),
-                      blurRadius: 6,
+            if (entry.rank > 0)
+              Positioned(
+                bottom: -2,
+                right: -2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: badgeColor,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: badgeColor.withOpacity(0.4),
+                        blurRadius: 6,
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    '#${entry.rank}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
                     ),
-                  ],
-                ),
-                child: Text(
-                  '#${entry.rank}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-            ),
           ],
         ),
         title: Text(

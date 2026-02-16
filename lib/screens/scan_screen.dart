@@ -22,19 +22,14 @@ class _ScanScreenState extends State<ScanScreen> {
   String? _selectedTrashType;
   bool _isLoading = false;
   bool _isProcessing = false;
-  
+
   // Hasil dari API
   double? _volumeLiters;
   double? _weightKg;
   File? _imageFile;
 
   // Daftar jenis sampah
-  final List<String> _trashTypes = [
-    'Sampah Organik',
-    'Plastik',
-    'Kertas',
-    'Sampah Residu'
-  ];
+  final List<String> _trashTypes = ['Organik', 'Anorganik'];
 
   @override
   void initState() {
@@ -121,21 +116,25 @@ class _ScanScreenState extends State<ScanScreen> {
     print('=== Starting _processImage ===');
     print('Image file path: ${_imageFile?.path}');
     print('Image file exists: ${_imageFile?.existsSync()}');
-    print('Image file length: ${_imageFile != null ? File(_imageFile!.path).lengthSync() : 'null'} bytes');
-    
+    print(
+      'Image file length: ${_imageFile != null ? File(_imageFile!.path).lengthSync() : 'null'} bytes',
+    );
+
     if (_imageFile == null) {
       _showErrorDialog('Silakan pilih gambar terlebih dahulu');
       print('Image file is null');
       return;
     }
-    
+
     // Tambahkan pengecekan tambahan untuk file
     if (!await _imageFile!.exists()) {
-      _showErrorDialog('File gambar tidak ditemukan. Silakan pilih gambar kembali.');
+      _showErrorDialog(
+        'File gambar tidak ditemukan. Silakan pilih gambar kembali.',
+      );
       print('Image file does not exist at path: ${_imageFile!.path}');
       return;
     }
-    
+
     // Cek ukuran file
     int fileSize = await _imageFile!.length();
     print('Image file size: $fileSize bytes');
@@ -159,7 +158,7 @@ class _ScanScreenState extends State<ScanScreen> {
       // Membuat request multipart untuk upload ke API volume detection
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://192.168.68.144:5000/detect-volume'),
+        Uri.parse('http://192.168.1.13:5000/detect-volume'),
       );
 
       // Menambahkan file gambar
@@ -173,7 +172,9 @@ class _ScanScreenState extends State<ScanScreen> {
 
       // Menambahkan jenis sampah
       // Untuk API deteksi volume, gunakan format lowercase
-      String trashTypeValueForDetection = _getTrashTypeValueForDetection(_selectedTrashType!);
+      String trashTypeValueForDetection = _getTrashTypeValueForDetection(
+        _selectedTrashType!,
+      );
       request.fields['trash_type'] = trashTypeValueForDetection;
 
       var response = await request.send();
@@ -185,25 +186,33 @@ class _ScanScreenState extends State<ScanScreen> {
       if (response.statusCode == 200) {
         // Cek apakah response adalah HTML bukan JSON
         if (responseBody.startsWith('<')) {
-          print('Received HTML response instead of JSON: ${responseBody.substring(0, 100)}...');
-          _showErrorDialog('Server mengembalikan error. Silakan coba lagi nanti.');
+          print(
+            'Received HTML response instead of JSON: ${responseBody.substring(0, 100)}...',
+          );
+          _showErrorDialog(
+            'Server mengembalikan error. Silakan coba lagi nanti.',
+          );
           return;
         }
-        
+
         final result = jsonDecode(responseBody);
         print('Volume detection result: $result');
-        
+
         setState(() {
           _volumeLiters = (result['volume_liters'] as num?)?.toDouble();
           _weightKg = (result['weight_kg'] as num?)?.toDouble();
         });
-        
+
         // Validasi bahwa nilai bukan nol
         if (_volumeLiters == 0.0 || _weightKg == 0.0) {
-          _showErrorDialog('Tidak dapat mendeteksi volume atau berat dari gambar. Silakan coba dengan gambar yang berbeda.');
+          _showErrorDialog(
+            'Tidak dapat mendeteksi volume atau berat dari gambar. Silakan coba dengan gambar yang berbeda.',
+          );
         }
       } else {
-        _showErrorDialog('Gagal memproses gambar. Kode error: ${response.statusCode}');
+        _showErrorDialog(
+          'Gagal memproses gambar. Kode error: ${response.statusCode}',
+        );
         print('Error response: $responseBody');
       }
     } catch (e) {
@@ -217,12 +226,14 @@ class _ScanScreenState extends State<ScanScreen> {
     }
   }
 
-    Future<void> _submitDeposit() async {
+  Future<void> _submitDeposit() async {
     print('=== Starting _submitDeposit ===');
     print('Image file path: ${_imageFile?.path}');
-    
+
     if (_volumeLiters == null || _weightKg == null) {
-      _showErrorDialog('Silakan proses gambar terlebih dahulu untuk mendapatkan volume dan berat');
+      _showErrorDialog(
+        'Silakan proses gambar terlebih dahulu untuk mendapatkan volume dan berat',
+      );
       print('Volume or weight is null');
       return;
     }
@@ -232,14 +243,16 @@ class _ScanScreenState extends State<ScanScreen> {
       print('Image file is null');
       return;
     }
-    
+
     // Tambahkan pengecekan tambahan untuk file
     if (!await _imageFile!.exists()) {
-      _showErrorDialog('File gambar tidak ditemukan. Silakan pilih gambar kembali.');
+      _showErrorDialog(
+        'File gambar tidak ditemukan. Silakan pilih gambar kembali.',
+      );
       print('Image file does not exist at path: ${_imageFile!.path}');
       return;
     }
-    
+
     // Cek ukuran file
     int fileSize = await _imageFile!.length();
     print('Image file size: $fileSize bytes');
@@ -285,8 +298,10 @@ class _ScanScreenState extends State<ScanScreen> {
 
       // Menggunakan DepositService untuk submit deposit
       String detectedType = _getTrashTypeValue(_selectedTrashType!);
-      print('Submitting deposit with params: jenisTerdeteksi=$detectedType, volume=${_volumeLiters!}, berat=${_weightKg!}, penggunaId=$penggunaId, kecamatanId=$kecamatanId');
-      
+      print(
+        'Submitting deposit with params: jenisTerdeteksi=$detectedType, volume=${_volumeLiters!}, berat=${_weightKg!}, penggunaId=$penggunaId, kecamatanId=$kecamatanId',
+      );
+
       final result = await depositService.submitDeposit(
         token: token,
         imagePath: _imageFile!.path,
@@ -326,29 +341,21 @@ class _ScanScreenState extends State<ScanScreen> {
 
   String _getTrashTypeValue(String displayName) {
     switch (displayName) {
-      case 'Sampah Organik':
+      case 'Organik':
         return 'Organik';
-      case 'Plastik':
-        return 'Plastik';
-      case 'Kertas':
-        return 'Kertas';
-      case 'Sampah Residu':
-        return 'Residu';
+      case 'Anorganik':
+        return 'Anorganik';
       default:
         return 'Organik';
     }
   }
-  
+
   String _getTrashTypeValueForDetection(String displayName) {
     switch (displayName) {
-      case 'Sampah Organik':
+      case 'Organik':
         return 'organik';
-      case 'Plastik':
-        return 'plastik';
-      case 'Kertas':
-        return 'kertas';
-      case 'Sampah Residu':
-        return 'residu';
+      case 'Anorganik':
+        return 'anorganik';
       default:
         return 'organik';
     }
@@ -370,13 +377,10 @@ class _ScanScreenState extends State<ScanScreen> {
             children: [
               const Text(
                 'Upload Foto Sampah',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
-              
+
               // Tombol untuk memilih gambar dari galeri atau kamera
               Row(
                 children: [
@@ -434,13 +438,10 @@ class _ScanScreenState extends State<ScanScreen> {
 
               const Text(
                 'Jenis Sampah',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
-              
+
               // Dropdown jenis sampah
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -521,9 +522,15 @@ class _ScanScreenState extends State<ScanScreen> {
                         ),
                         const SizedBox(height: 10),
                         if (_volumeLiters != null)
-                          _buildResultItem('Volume (Liter)', '${_volumeLiters!.toStringAsFixed(2)} L'),
+                          _buildResultItem(
+                            'Volume (Liter)',
+                            '${_volumeLiters!.toStringAsFixed(2)} L',
+                          ),
                         if (_weightKg != null)
-                          _buildResultItem('Berat (Kg)', '${_weightKg!.toStringAsFixed(2)} Kg'),
+                          _buildResultItem(
+                            'Berat (Kg)',
+                            '${_weightKg!.toStringAsFixed(2)} Kg',
+                          ),
                       ],
                     ),
                   ),
@@ -535,10 +542,12 @@ class _ScanScreenState extends State<ScanScreen> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: _isLoading || _volumeLiters == null ? null : _submitDeposit,
+                  onPressed: _isLoading || _volumeLiters == null
+                      ? null
+                      : _submitDeposit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _volumeLiters != null 
-                        ? const Color(0xFF368b3a) 
+                    backgroundColor: _volumeLiters != null
+                        ? const Color(0xFF368b3a)
                         : Colors.grey.shade400,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
@@ -577,16 +586,10 @@ class _ScanScreenState extends State<ScanScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 16),
-          ),
+          Text(label, style: const TextStyle(fontSize: 16)),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ],
       ),

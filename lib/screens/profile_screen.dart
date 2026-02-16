@@ -254,7 +254,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _kecamatanList = kecamatanList;
           _isLoadingKecamatan = false;
 
-          // Set default selection if user has a district
+          // Set default selection only if user has a district
           if (_user != null && _user!.district != null) {
             final userDistrict = _user!.district!;
             print('User district: $userDistrict');
@@ -264,14 +264,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               );
               print('Matched kecamatan: ${_selectedKecamatan?.name}');
             } catch (e) {
-              print('No matching kecamatan found, selecting first');
-              if (_kecamatanList.isNotEmpty) {
-                _selectedKecamatan = _kecamatanList.first;
-              }
+              print(
+                'No matching kecamatan found, keeping null for hint display',
+              );
+              _selectedKecamatan = null;
             }
-          } else if (_kecamatanList.isNotEmpty) {
-            print('No user district, selecting first kecamatan');
-            _selectedKecamatan = _kecamatanList.first;
+          } else {
+            print('No user district, keeping null for hint display');
+            _selectedKecamatan = null;
           }
         });
       }
@@ -698,8 +698,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
             }
           });
 
+          // Resolve kecamatan ID to name (API returns ID, not name)
+          final districtValue = updatedUser.district;
+          if (districtValue != null && int.tryParse(districtValue) != null) {
+            final kecamatanName = await _getKecamatanNameById(districtValue);
+            if (kecamatanName != null && mounted) {
+              setState(() {
+                _user = User(
+                  id: _user!.id,
+                  name: _user!.name,
+                  email: _user!.email,
+                  address: _user!.address,
+                  district: kecamatanName,
+                  avatarPath: _user!.avatarPath,
+                  totalPoints: _user!.totalPoints,
+                  streakDays: _user!.streakDays,
+                );
+              });
+            }
+          }
+
           print('Avatar uploaded successfully and state updated directly');
-          print('Updated user has district: ${updatedUser.district}');
+          print('Updated user has district: ${_user?.district}');
           print('Updated user has avatarPath: ${updatedUser.avatarPath}');
 
           ScaffoldMessenger.of(context).showSnackBar(
@@ -740,482 +760,670 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    print('Building Profile Screen - currentTab: $_currentTab');
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Profil'),
-          backgroundColor: const Color(0xFF368b3a),
-          foregroundColor: Colors.white,
-          bottom: TabBar(
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white70,
-            indicatorColor: Colors.white,
-            tabs: const [
-              Tab(text: 'Profil'),
-              Tab(text: 'Riwayat'),
-            ],
-            onTap: (index) {
-              print('Tab tapped: $index');
-              setState(() {
-                _currentTab = index;
-                if (index == 1 &&
-                    (_wasteHistory.isEmpty || !_isLoadingHistory)) {
-                  _loadWasteHistory();
-                }
-              });
-            },
-          ),
-          actions: [
-            if (_isEditing && _currentTab == 0)
-              IconButton(
-                onPressed: () {
-                  setState(() {
-                    _isEditing = false;
-                  });
-                },
-                icon: const Icon(Icons.close),
+        backgroundColor: const Color(0xFFF5F7FA),
+        body: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) {
+            return [
+              SliverAppBar(
+                expandedHeight: 260,
+                floating: false,
+                pinned: true,
+                backgroundColor: const Color(0xFF2E7D32),
+                foregroundColor: Colors.white,
+                flexibleSpace: FlexibleSpaceBar(
+                  background: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color(0xFF1B5E20),
+                          Color(0xFF2E7D32),
+                          Color(0xFF43A047),
+                        ],
+                      ),
+                    ),
+                    child: Stack(
+                      children: [
+                        // Decorative circles
+                        Positioned(
+                          top: -30,
+                          right: -30,
+                          child: Container(
+                            width: 150,
+                            height: 150,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withOpacity(0.08),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 40,
+                          left: -40,
+                          child: Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withOpacity(0.06),
+                            ),
+                          ),
+                        ),
+                        // Avatar and name
+                        SafeArea(
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const SizedBox(height: 10),
+                                _buildAvatarWidget(),
+                                const SizedBox(height: 12),
+                                Text(
+                                  _user?.name ?? 'Pengguna',
+                                  style: const TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                actions: [
+                  if (_isEditing && _currentTab == 0)
+                    IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _isEditing = false;
+                        });
+                      },
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                ],
+                bottom: PreferredSize(
+                  preferredSize: const Size.fromHeight(48),
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
+                      ),
+                    ),
+                    child: TabBar(
+                      labelColor: const Color(0xFF2E7D32),
+                      unselectedLabelColor: Colors.grey[500],
+                      indicatorColor: const Color(0xFF2E7D32),
+                      indicatorWeight: 3,
+                      indicatorSize: TabBarIndicatorSize.label,
+                      labelStyle: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                      unselectedLabelStyle: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 15,
+                      ),
+                      tabs: const [
+                        Tab(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.person_outline_rounded, size: 20),
+                              SizedBox(width: 6),
+                              Text('Profil'),
+                            ],
+                          ),
+                        ),
+                        Tab(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.history_rounded, size: 20),
+                              SizedBox(width: 6),
+                              Text('Riwayat'),
+                            ],
+                          ),
+                        ),
+                      ],
+                      onTap: (index) {
+                        setState(() {
+                          _currentTab = index;
+                          if (index == 1 &&
+                              (_wasteHistory.isEmpty || !_isLoadingHistory)) {
+                            _loadWasteHistory();
+                          }
+                        });
+                      },
+                    ),
+                  ),
+                ),
               ),
-          ],
-        ),
-        body: TabBarView(
-          children: [
-            // Profile Tab
-            _buildProfileContent(),
-            // History Tab
-            _buildHistoryContent(),
-          ],
+            ];
+          },
+          body: TabBarView(
+            children: [_buildProfileContent(), _buildHistoryContent()],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildProfileContent() {
-    print(
-      'Building profile content - isLoading: $_isLoading, user: ${_user?.name}',
+  Widget _buildAvatarWidget() {
+    return Stack(
+      children: [
+        Container(
+          width: 90,
+          height: 90,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 3),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: ClipOval(
+            child: _user?.avatarPath != null
+                ? Image.network(
+                    _buildAvatarUrl(_user!.avatarPath!),
+                    width: 90,
+                    height: 90,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: const Color(0xFF43A047),
+                        child: const Icon(
+                          Icons.person_rounded,
+                          size: 45,
+                          color: Colors.white,
+                        ),
+                      );
+                    },
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        color: const Color(0xFF43A047),
+                        child: const Center(
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  )
+                : Container(
+                    color: const Color(0xFF43A047),
+                    child: const Icon(
+                      Icons.person_rounded,
+                      size: 45,
+                      color: Colors.white,
+                    ),
+                  ),
+          ),
+        ),
+        Positioned(
+          bottom: 0,
+          right: 0,
+          child: GestureDetector(
+            onTap: _isUploadingAvatar ? null : _pickImage,
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF66BB6A), Color(0xFF43A047)],
+                ),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: _isUploadingAvatar
+                  ? const Padding(
+                      padding: EdgeInsets.all(6),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Icon(
+                      Icons.camera_alt_rounded,
+                      size: 16,
+                      color: Colors.white,
+                    ),
+            ),
+          ),
+        ),
+      ],
     );
-    return _isLoading
-        ? const Center(child: CircularProgressIndicator())
-        : SingleChildScrollView(
-            padding: const EdgeInsets.all(20.0),
-            child: _user == null
-                ? const Center(child: Text('Gagal memuat data pengguna'))
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+  }
+
+  Widget _buildProfileContent() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFF2E7D32)),
+      );
+    }
+
+    if (_user == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline_rounded,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Gagal memuat data pengguna',
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 30),
+      child: Column(
+        children: [
+          if (!_isEditing) ...[
+            // Stats Row
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    'Total Poin',
+                    _calculatedPoints.toString(),
+                    Icons.star_rounded,
+                    const [Color(0xFFFFA726), Color(0xFFFF9800)],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatCard(
+                    'Streak',
+                    '${_calculatedStreakDays} hari',
+                    Icons.local_fire_department_rounded,
+                    const [Color(0xFFEF5350), Color(0xFFE53935)],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // Info Card
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  _buildInfoTile(Icons.email_outlined, 'Email', _user!.email),
+                  _buildDivider(),
+                  _buildInfoTile(
+                    Icons.location_on_outlined,
+                    'Alamat',
+                    _user!.address ?? '-',
+                  ),
+                  _buildDivider(),
+                  _buildInfoTile(
+                    Icons.map_outlined,
+                    'Kecamatan',
+                    _user!.district ?? '-',
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Edit Profile Button
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _isEditing = true;
+                  });
+                },
+                icon: const Icon(Icons.edit_rounded, size: 20),
+                label: const Text(
+                  'Edit Profil',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2E7D32),
+                  foregroundColor: Colors.white,
+                  elevation: 2,
+                  shadowColor: const Color(0xFF2E7D32).withOpacity(0.4),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Logout Button
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: OutlinedButton.icon(
+                onPressed: _logout,
+                icon: const Icon(Icons.logout_rounded, size: 20),
+                label: const Text(
+                  'Keluar',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red[600],
+                  side: BorderSide(color: Colors.red[300]!, width: 1.5),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ),
+          ] else ...[
+            // Edit Mode
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Center(
-                        child: Stack(
-                          children: [
-                            Container(
-                              width: 120,
-                              height: 120,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF368b3a),
-                                borderRadius: BorderRadius.circular(60),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.grey.withOpacity(0.3),
-                                    spreadRadius: 2,
-                                    blurRadius: 5,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: _user?.avatarPath != null
-                                  ? (() {
-                                      print(
-                                        'Avatar path available: ${_user!.avatarPath}',
-                                      );
-                                      print(
-                                        'Built avatar URL: ${_buildAvatarUrl(_user!.avatarPath!)}',
-                                      );
-                                      return ClipRRect(
-                                        borderRadius: BorderRadius.circular(60),
-                                        child: Image.network(
-                                          _buildAvatarUrl(_user!.avatarPath!),
-                                          width: 120,
-                                          height: 120,
-                                          fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (context, error, stackTrace) {
-                                                print(
-                                                  'Error loading avatar image: $error, URL: ${_buildAvatarUrl(_user!.avatarPath!)}',
-                                                );
-                                                return Icon(
-                                                  Icons.person,
-                                                  size: 60,
-                                                  color: Colors.white,
-                                                );
-                                              },
-                                          loadingBuilder:
-                                              (
-                                                context,
-                                                child,
-                                                loadingProgress,
-                                              ) {
-                                                if (loadingProgress == null) {
-                                                  print(
-                                                    'Avatar image loaded: ${_buildAvatarUrl(_user!.avatarPath!)}',
-                                                  );
-                                                  return child;
-                                                }
-                                                print(
-                                                  'Avatar image loading...',
-                                                );
-                                                return Container(
-                                                  width: 120,
-                                                  height: 120,
-                                                  decoration: BoxDecoration(
-                                                    color: const Color(
-                                                      0xFF368b3a,
-                                                    ),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          60,
-                                                        ),
-                                                  ),
-                                                  child: const Center(
-                                                    child: SizedBox(
-                                                      width: 30,
-                                                      height: 30,
-                                                      child: CircularProgressIndicator(
-                                                        valueColor:
-                                                            AlwaysStoppedAnimation<
-                                                              Color
-                                                            >(Colors.white),
-                                                        strokeWidth: 2,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                );
-                                              },
-                                        ),
-                                      );
-                                    })()
-                                  : (() {
-                                      print(
-                                        'No avatar path available, showing default icon',
-                                      );
-                                      return Icon(
-                                        Icons.person,
-                                        size: 60,
-                                        color: Colors.white,
-                                      );
-                                    })(),
-                            ),
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF368b3a),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 2,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.grey.withOpacity(0.5),
-                                      spreadRadius: 1,
-                                      blurRadius: 3,
-                                      offset: const Offset(1, 1),
-                                    ),
-                                  ],
-                                ),
-                                child: _isUploadingAvatar
-                                    ? const Center(
-                                        child: SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            valueColor:
-                                                AlwaysStoppedAnimation<Color>(
-                                                  Colors.white,
-                                                ),
-                                          ),
-                                        ),
-                                      )
-                                    : IconButton(
-                                        onPressed: _pickImage,
-                                        icon: const Icon(
-                                          Icons.camera_alt,
-                                          size: 20,
-                                          color: Colors.white,
-                                        ),
-                                        padding: EdgeInsets.zero,
-                                      ),
-                              ),
-                            ),
-                          ],
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2E7D32).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.edit_rounded,
+                          color: Color(0xFF2E7D32),
+                          size: 20,
                         ),
                       ),
-                      const SizedBox(height: 30),
-                      if (!_isEditing) ...[
-                        Card(
-                          margin: const EdgeInsets.only(bottom: 20),
-                          elevation: 3,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(20.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildInfoRow('Nama', _user!.name),
-                                const Divider(height: 20, color: Colors.grey),
-                                _buildInfoRow('Email', _user!.email),
-                                const Divider(height: 20, color: Colors.grey),
-                                _buildInfoRow('Alamat', _user!.address ?? '-'),
-                                const Divider(height: 20, color: Colors.grey),
-                                _buildInfoRow(
-                                  'Kecamatan',
-                                  _user!.district ?? '-',
-                                ),
-                              ],
-                            ),
-                          ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Edit Profil',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1B5E20),
                         ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildStatCard(
-                                'Total Poin',
-                                _calculatedPoints.toString(),
-                              ),
-                            ),
-                            const SizedBox(width: 15),
-                            Expanded(
-                              child: _buildStatCard(
-                                'Streak Hari',
-                                '${_calculatedStreakDays} hari',
-                              ),
-                            ),
-                          ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: InputDecoration(
+                      labelText: 'Nama',
+                      prefixIcon: const Icon(
+                        Icons.person_outline_rounded,
+                        color: Color(0xFF43A047),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF2E7D32),
+                          width: 2,
                         ),
-                        const SizedBox(height: 30),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                _isEditing = true;
-                              });
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF368b3a),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            child: const Text('Edit Profil'),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _addressController,
+                    decoration: InputDecoration(
+                      labelText: 'Alamat',
+                      prefixIcon: const Icon(
+                        Icons.location_on_outlined,
+                        color: Color(0xFF43A047),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF2E7D32),
+                          width: 2,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _isLoadingKecamatan
+                      ? const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF2E7D32),
                           ),
-                        ),
-                        const SizedBox(height: 20),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: OutlinedButton(
-                            onPressed: _logout,
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(
-                                color: Colors.red,
+                        )
+                      : _kecamatanList.isEmpty
+                      ? const Text('Data kecamatan tidak tersedia')
+                      : DropdownButtonFormField<Kecamatan>(
+                          value: _selectedKecamatan,
+                          hint: const Text('Pilih Kecamatan Anda'),
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            labelText: 'Kecamatan',
+                            prefixIcon: const Icon(
+                              Icons.map_outlined,
+                              color: Color(0xFF43A047),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF2E7D32),
                                 width: 2,
                               ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
                             ),
-                            child: const Text(
-                              'Logout',
-                              style: TextStyle(
-                                color: Colors.red,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                            filled: true,
+                            fillColor: Colors.grey[50],
                           ),
+                          items: _kecamatanList.map((kecamatan) {
+                            return DropdownMenuItem<Kecamatan>(
+                              value: kecamatan,
+                              child: Text(
+                                kecamatan.name,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (Kecamatan? newValue) {
+                            setState(() {
+                              _selectedKecamatan = newValue;
+                            });
+                          },
+                          validator: (value) {
+                            if (value == null) return 'Silakan pilih kecamatan';
+                            return null;
+                          },
+                          dropdownColor: Colors.white,
+                          menuMaxHeight: 300,
                         ),
-                        const SizedBox(height: 30),
-                      ] else ...[
-                        Card(
-                          margin: const EdgeInsets.only(bottom: 20),
-                          elevation: 3,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(20.0),
-                            child: Column(
-                              children: [
-                                TextFormField(
-                                  controller: _nameController,
-                                  decoration: InputDecoration(
-                                    labelText: 'Nama',
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: const BorderSide(
-                                        color: Color(0xFF368b3a),
-                                        width: 2,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-                                TextFormField(
-                                  controller: _addressController,
-                                  decoration: InputDecoration(
-                                    labelText: 'Alamat',
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: const BorderSide(
-                                        color: Color(0xFF368b3a),
-                                        width: 2,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-                                _isLoadingKecamatan
-                                    ? const CircularProgressIndicator()
-                                    : _kecamatanList.isEmpty
-                                    ? const Text('No kecamatan data available')
-                                    : DropdownButtonFormField<Kecamatan>(
-                                        value: _selectedKecamatan,
-                                        hint: const Text('Pilih Kecamatan'),
-                                        isExpanded: true,
-                                        decoration: InputDecoration(
-                                          labelText: 'Kecamatan',
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              10,
-                                            ),
-                                          ),
-                                          focusedBorder: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              10,
-                                            ),
-                                            borderSide: const BorderSide(
-                                              color: Color(0xFF368b3a),
-                                              width: 2,
-                                            ),
-                                          ),
-                                        ),
-                                        items: _kecamatanList.map((kecamatan) {
-                                          print(
-                                            'Building dropdown item: ${kecamatan.name}',
-                                          );
-                                          return DropdownMenuItem<Kecamatan>(
-                                            value: kecamatan,
-                                            child: Text(
-                                              kecamatan.name,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          );
-                                        }).toList(),
-                                        onChanged: (Kecamatan? newValue) {
-                                          print(
-                                            'Selected kecamatan: ${newValue?.name}',
-                                          );
-                                          setState(() {
-                                            _selectedKecamatan = newValue;
-                                          });
-                                        },
-                                        validator: (value) {
-                                          if (value == null) {
-                                            return 'Please select a kecamatan';
-                                          }
-                                          return null;
-                                        },
-                                        dropdownColor: Colors.white,
-                                        menuMaxHeight: 300,
-                                      ),
-                                const SizedBox(height: 20),
-                                TextFormField(
-                                  controller: _passwordController,
-                                  obscureText: true,
-                                  decoration: InputDecoration(
-                                    labelText: 'Password Baru (Opsional)',
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: const BorderSide(
-                                        color: Color(0xFF368b3a),
-                                        width: 2,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-                                TextFormField(
-                                  controller: _confirmPasswordController,
-                                  obscureText: true,
-                                  decoration: InputDecoration(
-                                    labelText: 'Konfirmasi Password Baru',
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: const BorderSide(
-                                        color: Color(0xFF368b3a),
-                                        width: 2,
-                                      ),
-                                    ),
-                                  ),
-                                  validator: (value) {
-                                    if (_passwordController.text.isNotEmpty &&
-                                        value != _passwordController.text) {
-                                      return 'Password tidak cocok';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.orange[200]!),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.lock_outline_rounded,
+                          color: Colors.orange[700],
+                          size: 20,
                         ),
-                        const SizedBox(height: 30),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed: _updateProfile,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF368b3a),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Kosongkan jika tidak ingin mengubah password',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.orange[800],
                             ),
-                            child: const Text('Simpan Perubahan'),
                           ),
                         ),
                       ],
-                      const SizedBox(height: 30),
-                    ],
+                    ),
                   ),
-          );
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: 'Password Baru (Opsional)',
+                      prefixIcon: const Icon(
+                        Icons.lock_outline_rounded,
+                        color: Color(0xFF43A047),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF2E7D32),
+                          width: 2,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _confirmPasswordController,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: 'Konfirmasi Password Baru',
+                      prefixIcon: const Icon(
+                        Icons.lock_reset_rounded,
+                        color: Color(0xFF43A047),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF2E7D32),
+                          width: 2,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                    ),
+                    validator: (value) {
+                      if (_passwordController.text.isNotEmpty &&
+                          value != _passwordController.text) {
+                        return 'Password tidak cocok';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton.icon(
+                onPressed: _updateProfile,
+                icon: const Icon(Icons.save_rounded, size: 20),
+                label: const Text(
+                  'Simpan Perubahan',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2E7D32),
+                  foregroundColor: Colors.white,
+                  elevation: 2,
+                  shadowColor: const Color(0xFF2E7D32).withOpacity(0.4),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   Widget _buildHistoryContent() {
     if (_isLoadingHistory) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFF2E7D32)),
+      );
     }
 
     if (_wasteHistory.isEmpty) {
@@ -1223,99 +1431,202 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.history, size: 80, color: Colors.grey[400]),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.history_rounded,
+                size: 56,
+                color: Colors.grey[400],
+              ),
+            ),
             const SizedBox(height: 20),
-            const Text(
-              'Belum ada riwayat penyetoran',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+            Text(
+              'Belum ada riwayat',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Mulai setor sampah untuk melihat riwayat',
+              style: TextStyle(fontSize: 14, color: Colors.grey[400]),
             ),
           ],
         ),
       );
     }
 
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: ListView.builder(
-        itemCount: _wasteHistory.length,
-        itemBuilder: (context, index) {
-          final deposit = _wasteHistory[index];
-          return Card(
-            margin: const EdgeInsets.only(bottom: 16),
-            elevation: 3,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+      itemCount: _wasteHistory.length,
+      itemBuilder: (context, index) {
+        final deposit = _wasteHistory[index];
+        final isOrganic = deposit.trashType.toLowerCase() == 'organik';
+        final typeColor = isOrganic
+            ? const Color(0xFF43A047)
+            : const Color(0xFF1E88E5);
+        final typeIcon = isOrganic
+            ? Icons.eco_rounded
+            : Icons.recycling_rounded;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              // Color accent strip
+              Container(
+                width: 5,
+                height: 90,
+                decoration: BoxDecoration(
+                  color: typeColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    bottomLeft: Radius.circular(16),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Type icon
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: typeColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(typeIcon, color: typeColor, size: 24),
+              ),
+              const SizedBox(width: 12),
+              // Details
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _getTrashTypeDisplayName(deposit.trashType),
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Volume: ${deposit.volumeLiters.toStringAsFixed(2)} L',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            Text(
-                              'Berat: ${deposit.weightKg.toStringAsFixed(2)} Kg',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
+                      Text(
+                        _getTrashTypeDisplayName(deposit.trashType),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF212121),
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: deposit.isValidated
-                              ? const Color(0xFF368b3a)
-                              : Colors.orange,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          deposit.isValidated
-                              ? 'Tervalidasi'
-                              : 'Menunggu Validasi',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.straighten_rounded,
+                            size: 14,
+                            color: Colors.grey[500],
                           ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${deposit.volumeLiters.toStringAsFixed(1)} L',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Icon(
+                            Icons.scale_rounded,
+                            size: 14,
+                            color: Colors.grey[500],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${deposit.weightKg.toStringAsFixed(2)} Kg',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.schedule_rounded,
+                            size: 14,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _formatDate(deposit.timestamp),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[400],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Status badge
+              Padding(
+                padding: const EdgeInsets.only(right: 14),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: deposit.isValidated
+                        ? const Color(0xFF2E7D32).withOpacity(0.1)
+                        : Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        deposit.isValidated
+                            ? Icons.check_circle_rounded
+                            : Icons.hourglass_top_rounded,
+                        size: 14,
+                        color: deposit.isValidated
+                            ? const Color(0xFF2E7D32)
+                            : Colors.orange[700],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        deposit.isValidated ? 'Valid' : 'Pending',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: deposit.isValidated
+                              ? const Color(0xFF2E7D32)
+                              : Colors.orange[700],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Waktu Setoran: ${_formatDate(deposit.timestamp)}',
-                    style: const TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                ],
+                ),
               ),
-            ),
-          );
-        },
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1344,64 +1655,109 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return '${parsed.day}/${parsed.month}/${parsed.year}';
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 100,
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
-              fontWeight: FontWeight.w500,
+  Widget _buildInfoTile(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2E7D32).withOpacity(0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: const Color(0xFF43A047), size: 20),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[500],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF212121),
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildStatCard(String label, String value) {
-    return Card(
-      color: const Color(0xFF368b3a),
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.white70,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ],
+  Widget _buildDivider() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+      child: Divider(height: 1, color: Colors.grey[200]),
+    );
+  }
+
+  Widget _buildStatCard(
+    String label,
+    String value,
+    IconData icon,
+    List<Color> gradientColors,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradientColors,
         ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: gradientColors.first.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: Colors.white, size: 22),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.white.withOpacity(0.8),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }
