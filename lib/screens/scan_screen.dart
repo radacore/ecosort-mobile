@@ -191,7 +191,7 @@ class _ScanScreenState extends State<ScanScreen> {
     try {
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://192.168.1.13:5000/detect-volume'),
+        Uri.parse('http://43.163.127.239:5000/detect-volume'),
       );
 
       request.files.add(
@@ -483,7 +483,7 @@ class _ScanScreenState extends State<ScanScreen> {
         },
         body: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 30),
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

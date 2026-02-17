@@ -8,7 +8,7 @@ class AppConstants {
   // Make sure this matches your computer's IP address
   static const String BASE_URL =
       //'http://192.168.1.13:8000/api'; // UPDATE with your actual IP
-      'http://192.168.1.13:8000/api';
+      'http://43.163.127.239:8000/api';
 
   // Example for emulator:
   // static const String BASE_URL = 'http://10.0.2.2:8000/api';

@@ -3,9 +3,10 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/submission.dart';
+import '../utils/constants.dart';
 
 class SubmissionService {
-  static const String baseUrl = 'http://127.0.0.1:8000/api';
+  static const String baseUrl = AppConstants.BASE_URL;
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
   // Submit waste collection
@@ -25,9 +26,7 @@ class SubmissionService {
         Uri.parse('$baseUrl/setoran-sampah'),
       );
 
-      request.headers.addAll({
-        'Authorization': 'Bearer $token',
-      });
+      request.headers.addAll({'Authorization': 'Bearer $token'});
 
       request.fields['waste_type_id'] = wasteTypeId;
       request.fields['volume'] = volume.toString();
@@ -36,10 +35,7 @@ class SubmissionService {
 
       if (image != null) {
         request.files.add(
-          await http.MultipartFile.fromPath(
-            'image',
-            image.path,
-          ),
+          await http.MultipartFile.fromPath('image', image.path),
         );
       }
 
